@@ -2,48 +2,55 @@
 #include <stdlib.h>
 #include <string.h>
 #include <libavcodec/avcodec.h>
+#include <libavutil/imgutils.h>
 
-typedef void(*VideoCallback)(unsigned char* data_y, unsigned char* data_u, unsigned char* data_v, int line1, int line2, int line3, int width, int height, long pts);
+typedef void(*YUV420PBuffer)(unsigned char* yuv_buffer, int size, int width, int height, int pts);
 
 typedef enum ErrorCode {
 	kErrorCode_Success = 0,
 	kErrorCode_FFmpeg_Error = 1
 }ErrorCode;
 
-VideoCallback videoCallback = NULL;
+YUV420PBuffer YUV420P_buffer_callback = NULL;
 
 const AVCodec* codec;
 AVCodecParserContext* parser;
 AVCodecContext* c = NULL;
 AVPacket* pkt;
 AVFrame* frame;
-AVFrame* outFrame;
-long ptslist[10];
 
-ErrorCode copyFrameData(AVFrame* src, AVFrame* dst, long ptslist[]) {
-	ErrorCode ret = kErrorCode_Success;
-	memcpy(dst->data, src->data, sizeof(src->data));
-	dst->linesize[0] = src->linesize[0];
-	dst->linesize[1] = src->linesize[1];
-	dst->linesize[2] = src->linesize[2];
-	dst->width = src->width;
-	dst->height = src->height;
-	long pts = LONG_MAX;
-	int index = -1;
-	for (int i = 0; i < 10; i++) {
-		if (ptslist[i] < pts) {
-			pts = ptslist[i];
-			index = i;
-		}
+void frame_to_yuv_buffer(AVFrame *frame) {
+	int frame_size = av_image_get_buffer_size(frame->format, frame->width, frame->height, 1);
+	if (frame_size < 0) {
+		return;
 	}
-	if (index > -1) {
-		ptslist[index] = LONG_MAX;
+
+	uint8_t *yuv_buffer = (uint8_t *)av_malloc(frame_size);
+	if (!yuv_buffer) {
+		return;
 	}
-	dst->pts = pts;
-	return ret;
+
+	/* frame 数据按照 yuv420 格式填充到 yuv_buffer */
+	int ret = av_image_copy_to_buffer(
+		yuv_buffer, 
+		frame_size, 
+		(const uint8_t**)frame->data, 
+		frame->linesize, 
+		frame->format, 
+		frame->width, 
+		frame->height, 
+		1
+	);
+	if (ret < 0) {
+		av_free(yuv_buffer);
+		return;
+	}
+
+	YUV420P_buffer_callback(yuv_buffer, frame_size, frame->width, frame->height, frame->pts);
+	av_free(yuv_buffer);
 }
 
-static ErrorCode decode(AVCodecContext* dec_ctx, AVFrame* frame, AVPacket* pkt, AVFrame* outFrame, long ptslist[])
+static ErrorCode decode(AVCodecContext* dec_ctx, AVFrame* frame, AVPacket* pkt)
 {
 	ErrorCode res = kErrorCode_Success;
 	int ret;
@@ -57,27 +64,18 @@ static ErrorCode decode(AVCodecContext* dec_ctx, AVFrame* frame, AVPacket* pkt, 
 			ret = avcodec_receive_frame(dec_ctx, frame);
 			if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
 				break;
-			}
-			else if (ret < 0) {
+			} else if (ret < 0) {
 				res = kErrorCode_FFmpeg_Error;
 				break;
 			}
-
-			res = copyFrameData(frame, outFrame, ptslist);
-			if (res != kErrorCode_Success) {
-				break;
-			}
-
-			// 替换成 yuv420 的姿势
-
-			videoCallback(outFrame->data[0], outFrame->data[1], outFrame->data[2], outFrame->linesize[0], outFrame->linesize[1], outFrame->linesize[2], outFrame->width, outFrame->height, outFrame->pts);
+			frame_to_yuv_buffer(frame);
 		}
 	}
 
 	return res;
 }
 
-ErrorCode openDecoder(int codecType, long callback, int logLv) {
+ErrorCode openDecoder(int codecType, YUV420PBuffer callback) {
 	ErrorCode ret = kErrorCode_Success;
 	do {
 		codec = avcodec_find_decoder(AV_CODEC_ID_H265);
@@ -113,50 +111,43 @@ ErrorCode openDecoder(int codecType, long callback, int logLv) {
 			break;
 		}
 
-		outFrame = av_frame_alloc();
-		if (!outFrame) {
-			ret = kErrorCode_FFmpeg_Error;
-			break;
-		}
-
 		pkt = av_packet_alloc();
 		if (!pkt) {
 			ret = kErrorCode_FFmpeg_Error;
 			break;
 		}
 
-		for (int i = 0; i < 10; i++) {
-			ptslist[i] = LONG_MAX;
-		}
-
-		videoCallback = (VideoCallback)callback;
-
+		YUV420P_buffer_callback = callback;
 	} while (0);
+
 	return ret;
 }
 
-ErrorCode decodeData(unsigned char* data, size_t data_size, long pts) {
+ErrorCode decode_AnnexB_buffer(unsigned char* buffer, size_t buffer_size) {
 	ErrorCode ret = kErrorCode_Success;
 
-	for (int i = 0; i < 10; i++) {
-		if (ptslist[i] == LONG_MAX) {
-			ptslist[i] = pts;
-			break;
-		}
-	}
+	while (buffer_size > 0) {
+		int size = av_parser_parse2(
+			parser, 
+			c, 
+			&pkt->data, 
+			&pkt->size,
+			buffer, 
+			buffer_size, 
+			AV_NOPTS_VALUE, 
+			AV_NOPTS_VALUE, 
+			0
+		);
 
-	while (data_size > 0) {
-		int size = av_parser_parse2(parser, c, &pkt->data, &pkt->size,
-			data, data_size, AV_NOPTS_VALUE, AV_NOPTS_VALUE, 0);
 		if (size < 0) {
 			ret = kErrorCode_FFmpeg_Error;
 			break;
 		}
-		data += size;
-		data_size -= size;
+		buffer += size;
+		buffer_size -= size;
 
 		if (pkt->size) {
-			ret = decode(c, frame, pkt, outFrame, ptslist);
+			ret = decode(c, frame, pkt);
 			if (ret != kErrorCode_Success) {
         break;
       }
@@ -166,7 +157,7 @@ ErrorCode decodeData(unsigned char* data, size_t data_size, long pts) {
 }
 
 ErrorCode flushDecoder() {
-	return decode(c, frame, NULL, outFrame, ptslist);
+	return decode(c, frame, NULL);
 }
 
 ErrorCode closeDecoder() {
@@ -183,9 +174,6 @@ ErrorCode closeDecoder() {
 	}
 	if (pkt != NULL) {
 		av_packet_free(&pkt);
-	}
-	if (outFrame != NULL) {
-		av_frame_free(&outFrame);
 	}
 	
 	return ret;

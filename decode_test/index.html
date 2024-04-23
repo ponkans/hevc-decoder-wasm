@@ -1,0 +1,19 @@
+<!doctype html>
+<html>
+
+<body>
+  <div style="margin: 20px;">
+    点击选择 H265 裸流文件
+    <input type="file" onchange="handleVideoFiles(this.files)" onclick="setDecoder(1)">
+  </div>
+  <div style="margin-top: 10px">
+    <canvas width="500px" height="280px" id="playCanvas"></canvas>
+  </div>
+
+  <script src="../dist/libffmpeg_265.js"></script>
+  <script src="index.js"></script>
+  <script src="render.js"></script>
+
+</body>
+
+</html>

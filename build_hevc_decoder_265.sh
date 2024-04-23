@@ -11,5 +11,6 @@ emconfigure ./configure --cc="emcc" --cxx="em++" --ar="emar" --ranlib="emranlib"
     --enable-decoder=hevc --enable-parser=hevc
 make
 make install
+
 cd ../hevc-decoder-wasm
 ./build_hevc_decoder_wasm.sh 265

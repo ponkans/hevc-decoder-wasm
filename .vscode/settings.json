@@ -1,6 +1,8 @@
 {
   "files.associations": {
     "stdio.h": "c",
-    "avcodec.h": "c"
+    "avcodec.h": "c",
+    "stdlib.h": "c",
+    "imgutils.h": "c"
   }
 }

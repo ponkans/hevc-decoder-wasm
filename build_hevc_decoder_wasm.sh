@@ -4,7 +4,7 @@ export EXPORTED_FUNCTIONS="[ \
 		'_openDecoder', \
 		'_flushDecoder', \
 		'_closeDecoder', \
-    '_decodeData', \
+    '_decode_AnnexB_buffer', \
     '_main', \
     '_malloc', \
     '_free'

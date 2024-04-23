@@ -23,41 +23,20 @@ function decode_seq(file_list, file_idx) {
     var start_time = new Date();
 
     var videoSize = 0;
-    var videoCallback = Module.addFunction(function (addr_y, addr_u, addr_v, stride_y, stride_u, stride_v, width, height, pts) {
-        console.log("[%d]In video callback, size = %d * %d, pts = %d", ++videoSize, width, height, pts)
-        let size = width * height + (width / 2)  * (height / 2) + (width / 2)  * (height / 2)
-        let data = new Uint8Array(size)
-        let pos = 0
-        for(let i=0; i< height; i++) {
-            let src = addr_y + i * stride_y
-            let tmp = HEAPU8.subarray(src, src + width)
-            tmp = new Uint8Array(tmp)
-            data.set(tmp, pos)
-            pos += tmp.length
-        }
-        for(let i=0; i< height / 2; i++) {
-            let src = addr_u + i * stride_u
-            let tmp = HEAPU8.subarray(src, src + width / 2)
-            tmp = new Uint8Array(tmp)
-            data.set(tmp, pos)
-            pos += tmp.length
-        }
-        for(let i=0; i< height / 2; i++) {
-            let src = addr_v + i * stride_v
-            let tmp = HEAPU8.subarray(src, src + width / 2)
-            tmp = new Uint8Array(tmp)
-            data.set(tmp, pos)
-            pos += tmp.length
-        }
-        var obj = {
-            data: data,
-            width,
-            height
-        }
-        displayVideoFrame(obj);
-    }, 'viiiiiiiii');
+    var videoCallback = Module.addFunction(function (start, size, width, height, pts) {
+      videoSize += size;
+      console.log(`${width} * ${height}`, `pts: ${pts}`);
+      const u8s = Module.HEAPU8.subarray(start, start + size);
+      const data = new Uint8Array(u8s);
+      var obj = {
+        data,
+        width,
+        height
+      };
+      displayVideoFrame(obj);
+    }, "viiiii");
 
-    var ret = Module._openDecoder(decoder_type, videoCallback, LOG_LEVEL_WASM)
+    var ret = Module._openDecoder(decoder_type, videoCallback);
     if(ret == 0) {
         console.log("openDecoder success");
     } else {
@@ -66,35 +45,12 @@ function decode_seq(file_list, file_idx) {
     }
 
     var readerIndex = 0
-    var CHUNK_SIZE = 4096;
+    // var CHUNK_SIZE = 4096;
+    var CHUNK_SIZE = 3007;
     var i_stream_size = 0;
     var filePos = 0;
     var totalSize = 0
     var pts = 0
-    // do {
-    //     var reader = new FileReader();
-    //     reader.onload = function() {
-    //         var typedArray = new Uint8Array(this.result);
-    //         var size = typedArray.length
-    //         var cacheBuffer = Module._malloc(size);
-    //         Module.HEAPU8.set(typedArray, cacheBuffer);
-    //         totalSize += size
-    //         // console.log("[" + (++readerIndex) + "] Read len = ", size + ", Total size = " + totalSize)
-
-    //         Module._decodeData(cacheBuffer, size, pts++)
-    //         if (cacheBuffer != null) {
-    //             Module._free(cacheBuffer);
-    //             cacheBuffer = null;
-    //         }
-    //         if(size < CHUNK_SIZE) {
-    //             console.log('Flush frame data')
-    //             Module._flushDecoder();
-    //             Module._closeDecoder();
-    //         }
-    //     }
-    //     i_stream_size  = read_file_slice(reader, file, filePos, CHUNK_SIZE);
-    //     filePos += i_stream_size;
-    // } while (i_stream_size > 0);
     function run() {
       setTimeout(() => {
         var reader = new FileReader();
@@ -106,7 +62,7 @@ function decode_seq(file_list, file_idx) {
           totalSize += size;
           // console.log("[" + (++readerIndex) + "] Read len = ", size + ", Total size = " + totalSize)
   
-          Module._decodeData(cacheBuffer, size);
+          Module._decode_AnnexB_buffer(cacheBuffer, size);
           Module._free(cacheBuffer);
         };
         i_stream_size = read_file_slice(reader, file, filePos, CHUNK_SIZE);
@@ -114,7 +70,7 @@ function decode_seq(file_list, file_idx) {
         if (i_stream_size > 0) {
           run();
         }
-      }, 50);
+      }, 33);
     }
     run();
 
@@ -157,6 +113,7 @@ function blob_slice(blob, start_addr, end_addr) {
 
 function displayVideoFrame(obj) {
     var data = new Uint8Array(obj.data);
+    // 问题就在这里，没有返回宽高，导致 yuv 分量找不到位置，所以绿屏了
     var width = obj.width;
     var height = obj.height;
     var yLength = width * height;
@@ -172,11 +129,8 @@ function displayVideoFrame(obj) {
 }
 
 
-
-
-
-// 替换成 c 内部处理成 yuv 的形式，然后测测
-// 找一个其它的 hevc 裸流，放公司的不太好
-// pts 的问题看看？是否是要从 c 内部解析出来？我理解是需要解析出来的
-// ffmpeg 先命令行解析出来看看，然后代码解析后，对比看看
+// pts 的问题看看 pts 如何获取, 试试  frame->pts 可以直接取到不
+// ipc.265 不要放上去
 // ffmpeg 日志后面加（设置日志级别，设置日志回调）
+// 方法全部换成下划线的格式
+// (const uint8_t**)frame->data,  这个类型转换看看
