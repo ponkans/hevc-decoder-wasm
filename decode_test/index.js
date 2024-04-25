@@ -23,7 +23,7 @@ function decode_seq(file_list, file_idx) {
     var start_time = new Date();
 
     var videoSize = 0;
-    var videoCallback = Module.addFunction(function (start, size, width, height, pts) {
+    var videoCallback = Module.addFunction(function (start, size, width, height) {
       videoSize += size;
       console.log(`${width} * ${height}`, `pts: ${pts}`);
       const u8s = Module.HEAPU8.subarray(start, start + size);
@@ -34,9 +34,9 @@ function decode_seq(file_list, file_idx) {
         height
       };
       displayVideoFrame(obj);
-    }, "viiiii");
+    }, "viiii");
 
-    var ret = Module._openDecoder(decoder_type, videoCallback);
+    var ret = Module._init_decoder(videoCallback);
     if(ret == 0) {
         console.log("openDecoder success");
     } else {
@@ -129,8 +129,7 @@ function displayVideoFrame(obj) {
 }
 
 
-// pts 的问题看看 pts 如何获取, 试试  frame->pts 可以直接取到不
 // ipc.265 不要放上去
-// ffmpeg 日志后面加（设置日志级别，设置日志回调）
-// 方法全部换成下划线的格式
-// (const uint8_t**)frame->data,  这个类型转换看看
+// debug 调试
+// 读取文件，调用 decode 方法自己写。读取文件使用最新的 chrome 最新的 api，直接读取
+// flush close 方法测试

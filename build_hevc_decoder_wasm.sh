@@ -1,9 +1,9 @@
-rm -rf dist/libffmpeg_$1.wasm dist/libffmpeg_$1.js
+rm -rf dist/libffmpeg_265.wasm dist/libffmpeg_265.js
 export TOTAL_MEMORY=67108864
 export EXPORTED_FUNCTIONS="[ \
-		'_openDecoder', \
-		'_flushDecoder', \
-		'_closeDecoder', \
+		'_init_decoder', \
+		'_flush_decoder', \
+		'_close_decoder', \
     '_decode_AnnexB_buffer', \
     '_main', \
     '_malloc', \
@@ -11,7 +11,7 @@ export EXPORTED_FUNCTIONS="[ \
 ]"
 
 echo "Running Emscripten..."
-emcc decode_hevc.c ffmpeg/lib/libavcodec.a ffmpeg/lib/libavutil.a ffmpeg/lib/libswscale.a \
+emcc decode_hevc.c ffmpeg/lib/libavcodec.a ffmpeg/lib/libavutil.a \
     -O2 \
     -I "ffmpeg/include" \
     -s WASM=1 \
@@ -20,6 +20,6 @@ emcc decode_hevc.c ffmpeg/lib/libavcodec.a ffmpeg/lib/libavutil.a ffmpeg/lib/lib
    	-s EXTRA_EXPORTED_RUNTIME_METHODS="['addFunction']" \
 		-s RESERVED_FUNCTION_POINTERS=14 \
 		-s FORCE_FILESYSTEM=1 \
-    -o dist/libffmpeg_$1.js
+    -o dist/libffmpeg_265.js
 
 echo "Finished Build"
