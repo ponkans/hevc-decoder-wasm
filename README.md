@@ -1,7 +1,10 @@
 ## 简介
 H265 FFmpeg wasm 软解
 
-## 运行流程
+### 参考文章
+[Web 端 H265 wasm 软解入门](https://juejin.cn/spost/7362547971060367398)
+
+### 运行流程
 + mkdir hevc-box
 + cd hevc-box
 + git clone https://git.ffmpeg.org/ffmpeg.git
