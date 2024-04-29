@@ -42,6 +42,9 @@ ErrorCode init_decoder(YUV420PBuffer callback) {
       break;
     }
 
+    /* 多线程开启配置: 配置 4 个线程进行解码 */
+    // codec_context->thread_count = 4;
+
     if (avcodec_open2(codec_context, codec, NULL) < 0) {
       ret = kErrorCode_FFmpeg_Error;
       break;
@@ -89,6 +92,7 @@ void AVFrame_to_yuv_buffer(AVFrame* frame) {
     av_free(yuv_buffer);
     return;
   }
+
 
   YUV420P_buffer_callback(yuv_buffer, frame_size, frame->width, frame->height);
   av_free(yuv_buffer);

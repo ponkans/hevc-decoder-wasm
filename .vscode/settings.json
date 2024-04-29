@@ -3,6 +3,23 @@
     "stdio.h": "c",
     "avcodec.h": "c",
     "stdlib.h": "c",
-    "imgutils.h": "c"
-  }
+    "imgutils.h": "c",
+    "string.h": "c",
+    "__config": "c",
+    "__hash_table": "c",
+    "__locale": "c",
+    "array": "c",
+    "functional": "c",
+    "ios": "c",
+    "iterator": "c",
+    "locale": "c",
+    "ostream": "c",
+    "sstream": "c",
+    "string": "c",
+    "string_view": "c",
+    "vector": "c",
+    "type_traits": "c",
+    "time.h": "c"
+  },
+  "C_Cpp.errorSquiggles": "disabled"
 }

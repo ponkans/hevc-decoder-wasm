@@ -1,0 +1,14 @@
+prefix=/Users/zongwei/my/hevc-box/ffmpeg/../hevc-decoder-wasm/ffmpeg
+exec_prefix=${prefix}
+libdir=/Users/zongwei/my/hevc-box/ffmpeg/../hevc-decoder-wasm/ffmpeg/lib
+includedir=/Users/zongwei/my/hevc-box/ffmpeg/../hevc-decoder-wasm/ffmpeg/include
+
+Name: libavcodec
+Description: FFmpeg codec library
+Version: 58.35.100
+Requires: libavutil >= 56.22.100
+Requires.private: 
+Conflicts:
+Libs: -L${libdir}  -lavcodec -pthread -lm
+Libs.private: 
+Cflags: -I${includedir}

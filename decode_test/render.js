@@ -100,7 +100,7 @@ WebGLPlayer.prototype.initGL = function (options) {
     gl.v.bind(2, program, "VTexture");
 }
 
-WebGLPlayer.prototype.renderFrame = function (videoFrame, width, height, uOffset, vOffset) {
+WebGLPlayer.prototype.renderFrame = function (videoFrame, width, height, yLength, uvLength) {
     if (!this.gl) {
         console.log("[ER] Render frame failed due to WebGL not supported.");
         return;
@@ -111,38 +111,9 @@ WebGLPlayer.prototype.renderFrame = function (videoFrame, width, height, uOffset
     gl.clearColor(0.0, 0.0, 0.0, 0.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
-    gl.y.fill(width, height, videoFrame.subarray(0, uOffset));
-    gl.u.fill(width >> 1, height >> 1, videoFrame.subarray(uOffset, uOffset + vOffset));
-    gl.v.fill(width >> 1, height >> 1, videoFrame.subarray(uOffset + vOffset, videoFrame.length));
+    gl.y.fill(width, height, videoFrame.subarray(0, yLength));
+    gl.u.fill(width >> 1, height >> 1, videoFrame.subarray(yLength, yLength + uvLength));
+    gl.v.fill(width >> 1, height >> 1, videoFrame.subarray(yLength + uvLength, videoFrame.length));
 
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 };
-
-WebGLPlayer.prototype.fullscreen = function () {
-	  var canvas = this.canvas;
-    if (canvas.RequestFullScreen) {
-        canvas.RequestFullScreen();
-    } else if (canvas.webkitRequestFullScreen) {
-        canvas.webkitRequestFullScreen();
-    } else if (canvas.mozRequestFullScreen) {
-        canvas.mozRequestFullScreen();
-    } else if (canvas.msRequestFullscreen) {
-        canvas.msRequestFullscreen();
-    } else {
-        alert("This browser doesn't supporter fullscreen");
-    }
-};
-
-WebGLPlayer.prototype.exitfullscreen = function (){
-    if (document.exitFullscreen) {
-        document.exitFullscreen();
-    } else if (document.webkitExitFullscreen) {
-        document.webkitExitFullscreen();
-    } else if (document.mozCancelFullScreen) {
-        document.mozCancelFullScreen();
-    } else if (document.msExitFullscreen) {
-        document.msExitFullscreen();
-    } else {
-        alert("Exit fullscreen doesn't work");
-    }
-}

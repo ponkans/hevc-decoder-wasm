@@ -1,0 +1,14 @@
+prefix=/Users/zongwei/my/hevc-box/ffmpeg/../hevc-decoder-wasm/ffmpeg
+exec_prefix=${prefix}
+libdir=/Users/zongwei/my/hevc-box/ffmpeg/../hevc-decoder-wasm/ffmpeg/lib
+includedir=/Users/zongwei/my/hevc-box/ffmpeg/../hevc-decoder-wasm/ffmpeg/include
+
+Name: libavutil
+Description: FFmpeg utility library
+Version: 56.22.100
+Requires: 
+Requires.private: 
+Conflicts:
+Libs: -L${libdir}  -lavutil -pthread -lm
+Libs.private: 
+Cflags: -I${includedir}
